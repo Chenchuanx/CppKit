@@ -110,7 +110,7 @@ namespace stateless
             // 从当前状态的 StateRepresentation 中获取目标状态
             auto it = stateRepresentations_.find(currentState_);
             if (it == stateRepresentations_.end() || it->second == nullptr) {
-                throw std::runtime_error("State representation not found for state: " + std::to_string(static_cast<int>(currentState_)));
+                throw std::runtime_error("State representation not found for state");
             }
             
             auto currentStateRep = it->second.get();
@@ -121,16 +121,17 @@ namespace stateless
                 currentStateRep->runOnExitAction();
             }
             catch (const std::exception& e) {
-                throw std::runtime_error("Error running on exit action: " + std::string(e.what()));
+                throw std::runtime_error("Error running on exit action");
             }
             
             // 获取目标状态的 StateRepresentation
             auto destIt = stateRepresentations_.find(destinationState);
             if (destIt == stateRepresentations_.end() || destIt->second == nullptr) {
-                throw std::runtime_error("State representation not found for destination state: " + std::to_string(static_cast<int>(destinationState)));
+                throw std::runtime_error("State representation not found for destination state");
             }
             
             // 更新当前状态
+            TState oldCurrentState = currentState_;
             currentState_ = destinationState;
             
             // 执行进入目标状态的动作
@@ -138,6 +139,7 @@ namespace stateless
                 destIt->second->runOnEntryAction(std::move(triggerWithParams));
             }
             catch (const std::exception& e) {
+                currentState_ = oldCurrentState;    // 回滚当前状态
                 throw std::runtime_error("Error running on entry action: " + std::string(e.what()));
             }
         }

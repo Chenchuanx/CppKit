@@ -1,13 +1,10 @@
 #include <memory>
 #include <unordered_map>
 #include <functional>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include <thread>
 #include <tuple>
 #include <utility>
 #include <cstddef>
+#include <stdexcept>
 
 #include "trigger_parameters.hpp"
 
@@ -32,35 +29,62 @@ namespace stateless
 
     public:
         StateMachine(TState initialState) 
-            : currentState_(initialState)
+            : currentState_(initialState), activated_(false)
         {
-            triggerQueueThread_ = std::thread([this]() {
-                processTriggerQueue();
-            });
         }
 
         ~StateMachine()
         {
-            running_ = false;
-            triggerQueueCV_.notify_all();
-            triggerQueueThread_.join();
+        }
+
+        void activate()
+        {
+            if (activated_) {
+                return;  // 已经激活过，不再重复执行
+            }
+            activated_ = true;
+            
+            // 执行初始状态的 on_entry 动作
+            auto it = stateRepresentations_.find(currentState_);
+            if (it != stateRepresentations_.end() && it->second != nullptr) {
+                TTrigger defaultTrigger{};
+                auto triggerWithParams = std::make_unique<TriggerWithParametersNoArgs<TTrigger>>(defaultTrigger);
+                try {
+                    it->second->runOnEntryAction(std::move(triggerWithParams));
+                }
+                catch (const std::exception& e) {
+                    throw std::runtime_error("Error running initial state on_entry action: " + std::string(e.what()));
+                }
+            }
         }
 
         void fire(TTrigger trigger)
         {
-            std::lock_guard<std::mutex> lock(triggerQueueMutex_);
-            triggerQueue_.push(std::unique_ptr<TriggerWithParametersNoArgs<TTrigger>>(new TriggerWithParametersNoArgs<TTrigger>(trigger)));
-            triggerQueueCV_.notify_one();
+            auto triggerWithParams = std::make_unique<TriggerWithParametersNoArgs<TTrigger>>(trigger);
+            processTrigger(std::move(triggerWithParams));
         }
 
         template<typename... Args>
         void fire(TTrigger trigger, Args&&... args)
         {
-            std::lock_guard<std::mutex> lock(triggerQueueMutex_);
-            triggerQueue_.push(std::unique_ptr<TriggerWithParametersImpl<TTrigger, Args...>>(new TriggerWithParametersImpl<TTrigger, Args...>(trigger, std::forward<Args>(args)...)));
-            triggerQueueCV_.notify_one();
+            auto triggerWithParams = std::make_unique<TriggerWithParametersImpl<TTrigger, Args...>>(trigger, std::forward<Args>(args)...);
+            processTrigger(std::move(triggerWithParams));
         }
-        
+
+        std::shared_ptr<StateConfiguration<TState, TTrigger>> configure(TState state) 
+        { 
+            if (stateRepresentations_.find(state) == stateRepresentations_.end()) {
+                stateRepresentations_[state] = std::make_unique<StateRepresentation<TState, TTrigger>>(state);
+            }
+            
+            return std::make_shared<StateConfiguration<TState, TTrigger>>(state, stateRepresentations_[state].get());
+        }
+
+        TState currentState() const
+        {
+            return currentState_;
+        }
+
         bool can_fire(TTrigger trigger) const
         {
             auto stateRepresentation = stateRepresentations_.find(currentState_);
@@ -70,43 +94,15 @@ namespace stateless
             return false;
         }
 
-        std::shared_ptr<StateConfiguration<TState, TTrigger>> configure(TState state) 
-        {   
-            if (stateRepresentations_.find(state) == stateRepresentations_.end()) {
-                stateRepresentations_[state] = std::unique_ptr<StateRepresentation<TState, TTrigger>>(
-                    new StateRepresentation<TState, TTrigger>(state)
-                );
-            }
-            return std::make_shared<StateConfiguration<TState, TTrigger>>(state, stateRepresentations_[state].get());
-        }
-
-        TState currentState() const
-        {
-            return currentState_;
-        }
-
     private:
-        void processTriggerQueue()
-        {
-            while (running_)
-            {
-                std::unique_lock<std::mutex> lock(triggerQueueMutex_);
-                triggerQueueCV_.wait(lock, [this]() {
-                    return !triggerQueue_.empty() || !running_;
-                });
-                if (!running_) {
-                    break;
-                }
-                auto triggerWithParams = std::move(triggerQueue_.front());
-                triggerQueue_.pop();
-                lock.unlock();  // 主动释放锁，允许添加新触发器
-                processTrigger(std::move(triggerWithParams));
-            }
-        }
-
         void processTrigger(std::unique_ptr<TriggerWithParameters<TTrigger>> triggerWithParams)
         {
+            if (!activated_) {
+                activate();
+            }
+            
             TTrigger trigger = triggerWithParams->trigger();
+            
             if (!can_fire(trigger)) {
                 return;
             }
@@ -134,6 +130,9 @@ namespace stateless
                 throw std::runtime_error("State representation not found for destination state: " + std::to_string(static_cast<int>(destinationState)));
             }
             
+            // 更新当前状态
+            currentState_ = destinationState;
+            
             // 执行进入目标状态的动作
             try {
                 destIt->second->runOnEntryAction(std::move(triggerWithParams));
@@ -141,20 +140,12 @@ namespace stateless
             catch (const std::exception& e) {
                 throw std::runtime_error("Error running on entry action: " + std::string(e.what()));
             }
-            
-            // 更新当前状态
-            currentState_ = destinationState;
         }
 
     private:
         TState currentState_;
-        std::queue<std::unique_ptr<TriggerWithParameters<TTrigger>>> triggerQueue_;
         std::unordered_map<TState, std::unique_ptr<StateRepresentation<TState, TTrigger>>> stateRepresentations_;
-
-        bool running_{true};
-        std::thread triggerQueueThread_;
-        std::mutex triggerQueueMutex_;
-        std::condition_variable triggerQueueCV_;
+        bool activated_;
     };
 
     /**
@@ -183,7 +174,6 @@ namespace stateless
         template<typename Function>
         StateConfiguration *on_entry(Function&& action)
         {
-
             state_representation_->setOnEntryAction(
                 [action](TriggerWithParametersPtr triggerWithParams) {
                     action();
@@ -201,6 +191,8 @@ namespace stateless
                     if (impl) {
                         const auto& params = impl->parameters();
                         action(std::get<0>(params));
+                    } else {
+                        throw std::runtime_error("Type mismatch: on_entry action expects 1 parameter but trigger has different parameter types");
                     }
                 }
             );
@@ -217,6 +209,8 @@ namespace stateless
                     if (impl) {
                         const auto& params = impl->parameters();
                         action(std::get<0>(params), std::get<1>(params));
+                    } else {
+                        throw std::runtime_error("Type mismatch: on_entry action expects 2 parameters but trigger has different parameter types");
                     }
                 }
             );
@@ -233,6 +227,8 @@ namespace stateless
                     if (impl) {
                         const auto& params = impl->parameters();
                         action(std::get<0>(params), std::get<1>(params), std::get<2>(params));
+                    } else {
+                        throw std::runtime_error("Type mismatch: on_entry action expects 3 parameters but trigger has different parameter types");
                     }
                 }
             );

@@ -1,4 +1,6 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include "stateless/stateless.hpp"
 
 enum class State {
@@ -75,6 +77,12 @@ int main() {
             std::cout << "Exit state ERROR" << std::endl;
         })
         ->permit(Trigger::RESTART, State::INIT);
+
+    // 激活状态机，执行初始状态的 on_entry 动作
+    // 方式1：显式激活（配置完成后立即执行初始状态的 on_entry）
+    stateMachine.activate();
+    
+    // 方式2：不调用 activate()，在第一次 fire 时自动激活
 
     std::string input;
     while (true) {

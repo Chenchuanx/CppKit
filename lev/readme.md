@@ -9,23 +9,24 @@
 
 ## 公式
 $$
-\operatorname{lev}(a,b) =
+lev(a,b) =
 \begin{cases}
-|a| & \text{if } |b| = 0, \\[4pt]
-|b| & \text{if } |a| = 0, \\[4pt]
-\operatorname{lev}(\operatorname{tail}(a), \operatorname{tail}(b)) & \text{if } \operatorname{head}(a) = \operatorname{head}(b), \\[8pt]
+|a| & \text{if } |b| = 0, \\
+|b| & \text{if } |a| = 0, \\
+lev\big(tail(a), tail(b)\big) & \text{if } head(a) = head(b), \\
 1 + \min
 \begin{cases}
-\operatorname{lev}(\operatorname{tail}(a), b) \\
-\operatorname{lev}(a, \operatorname{tail}(b)) \\
-\operatorname{lev}(\operatorname{tail}(a), \operatorname{tail}(b))
+lev\big(tail(a), b\big) \\
+lev\big(a, tail(b)\big) \\
+lev\big(tail(a), tail(b)\big)
 \end{cases}
 & \text{otherwise}
 \end{cases}
 $$
-设有两个字符串 $a、b$，长度分别为 $|a|$ 和 $|b|$，二者的莱文斯坦距离记作 $\operatorname{lev}(a,b)$，定义式如上。\
-其中，对任意字符串 $x$，$\operatorname{tail}(x)$ 代表去掉首字符后剩余的子串（例：$\operatorname{tail}(x_0x_1\dots x_n) = x_1x_2\dots x_n$）；$\operatorname{head}(x)$ 代表字符串的首字符（例：$\operatorname{head}(x_0x_1\dots x_n) = x_0$）。字符串下标从0开始计数，$x[n]$ 或 $x_n$ 均可表示字符串 $x$ 的第 $n$ 个字符，因此首字符可写作 $x_0$ 或 $x[0]$。\
-min函数内第一项对应**删除**操作（将 $a$ 转为 $b$），第二项对应**插入**操作，第三项对应**替换**操作。
+
+设有两个字符串 $a、b$，长度分别为 $|a|$ 和 $|b|$，二者的莱文斯坦距离记作 $\mathrm{lev}(a,b)$，定义式如上。\
+其中，对任意字符串 $x$， $\mathrm{tail}(x)$ 代表去掉首字符后剩余的子串（例： $\mathrm{tail}(x_0x_1\dots x_n) = x_1x_2\dots x_n$ ）； $\mathrm{head}(x)$ 代表字符串的首字符（例： $\mathrm{head}(x_0x_1\dots x_n) = x_0$ ）。字符串下标从0开始计数， $x[n]$ 或 $x_n$ 均可表示字符串 $x$ 的第 $n$ 个字符，因此首字符可写作 $x_0$ 或 $x[0]$。\
+ $\mathrm{min}$ 函数内第一项对应**删除**操作（将 $a$ 转为 $b$），第二项对应**插入**操作，第三项对应**替换**操作。\
 该数学定义可以直接转化为朴素递归实现代码。
 
 ## 三种实现思路演进

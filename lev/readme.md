@@ -1,9 +1,8 @@
-# Levenshtein Distance 莱文斯坦距离
 ## 参考资料
 - 讲解视频：https://www.youtube.com/watch?v=tG4IeY01-xw&list=PLpM-Dvs8t0VbJu4lxZpKaXU6wFL5SApKW
 - 开源实现：https://github.com/tsoding/piff
 
-## 简介
+# Levenshtein Distance 莱文斯坦距离
 莱文斯坦距离用于计算将一个字符串转换为另一个字符串所需的最少编辑操作次数，支持替换、插入、删除三种操作。具体问题可参考LeetCode第72题。
 算法时间复杂度：$O(NM)$，$N、M$分别为两个字符串的长度。
 
@@ -41,3 +40,23 @@ $$
 
 ### 总结
 综上，我们从基础递归公式一步步改写出动态规划，这是一个很巧妙的思路。
+
+# 命令行Diff
+在完成莱文斯坦距离后，使用其来完成：
+1. diff比较两个文件差异(Linux的diff工具实际使用Myers算法实现)
+2. 根据错误命令推测实际命令\
+
+使用`g++ -std=c++11 -o main main.cpp`即可编译，运行结果如下:
+```
+chenchuan@U22:~/CppKit/lev/diff$ ./main difff
+找不到命令 "difff" 您的意思可能是: "diff"
+```
+```
+chenchuan@U22:~/CppKit/lev/diff$ ./main diff file1.txt file2.txt
+--- file1.txt
++++ file2.txt
++[新行1]
+-在本次 C++ 代码工程中，我完整实现了三套递进式莱文斯坦距离代码：无缓存暴力递归、带二维缓存记忆递归、无递归迭代 DP，额外拓展了带操作轨迹回溯的 DP版本，可以完整打印字符串每一步转换过程，直观展示替换、删除、插入的执行流程。
++在本次 C++ 代码工程中，[修改]我完整实现了三套递进式莱文斯坦距离代码：无缓存暴力递归、带二维缓存记忆递归、无递归迭代 DP，额外拓展了带操作轨迹回溯的 DP 版本，可以完整打印字符串每一步转换过程，直观展示替换、删除、插入的执行流程。
+-[删除]
+```

@@ -6,7 +6,8 @@ void PauseScene(SDL_Renderer *renderer, GameState &gameState)
 
     SDL_Rect rectSub = {WINDOW_WIDTH / 2 + 100, 120, BUTTON_W, BUTTON_H};
     SDL_Rect rectAdd = {WINDOW_WIDTH / 2 + 150, 120, BUTTON_W, BUTTON_H};
-    SDL_Rect rectBut = {WINDOW_WIDTH / 2 + 125, 200, BUTTON_W, BUTTON_H};
+    SDL_Rect rectWall = {WINDOW_WIDTH / 2 + 125, 200, BUTTON_W, BUTTON_H};
+    SDL_Rect rectAuto = {WINDOW_WIDTH / 2 + 125, 280, BUTTON_W, BUTTON_H};
     
     bool sceneRunning = true;
 
@@ -41,9 +42,14 @@ void PauseScene(SDL_Renderer *renderer, GameState &gameState)
                     if (TimeStep < MIN_TIMESTEP) TimeStep = MIN_TIMESTEP;
                 }
                 // 开关墙
-                if (SDL_PointInRect(&mouse, &rectBut))
+                if (SDL_PointInRect(&mouse, &rectWall))
                 {
                     WallExit = !WallExit;
+                }
+                // 开关自动行动
+                if (SDL_PointInRect(&mouse, &rectAuto))
+                {
+                    AutoRun = !AutoRun;
                 }
             }
         }
@@ -108,6 +114,7 @@ void GameScene(SDL_Renderer *renderer, GameState &gameState) {
     
     SDL_Event event;
     bool game_running = true;
+    bool pause = false;
     Uint32 lastOpTick = 0;
     const Uint32 OP_COOLDOWN = 50; // 操作冷却
     
@@ -121,27 +128,18 @@ void GameScene(SDL_Renderer *renderer, GameState &gameState) {
             }
             if (type != SDL_KEYDOWN) continue;
             switch(event.key.keysym.sym) {
-                case SDLK_w: {
-                    if (snake.GetDirection() != Direction::DOWN) 
-                        bufDir = Direction::UP;
-                } break;
-                case SDLK_a: {
-                    if (snake.GetDirection() != Direction::RIGHT) 
-                        bufDir = Direction::LEFT;
-                } break;
-                case SDLK_s: {
-                    if (snake.GetDirection() != Direction::UP) 
-                        bufDir = Direction::DOWN;
-                } break;
-                case SDLK_d: {
-                    if (snake.GetDirection() != Direction::LEFT) 
-                        bufDir = Direction::RIGHT;
-                } break;
-                case SDLK_ESCAPE: {
-                    gameState = GameState::Pause;
-                } return;
+                case SDLK_w: bufDir = Direction::UP;    break;
+                case SDLK_a: bufDir = Direction::LEFT;  break;
+                case SDLK_s: bufDir = Direction::DOWN;  break;
+                case SDLK_d: bufDir = Direction::RIGHT; break;
+                case SDLK_ESCAPE: gameState = GameState::Pause; return;
+                case SDLK_SPACE: pause = !pause; break;
                 default: break;
             }
+        }
+
+        if (pause) {
+            continue;
         }
         
         // 除去与前一个操作的时间间隔少的操作
@@ -149,7 +147,9 @@ void GameScene(SDL_Renderer *renderer, GameState &gameState) {
             continue;
         }
         // 蛇操作
-        snake.UpdateDirection(bufDir);
+        if (!AutoRun) {
+            snake.UpdateDirection(bufDir);
+        }
         SnakeState state = snake.Move(food.GetPoint(), food.GetScore());
         RenderGameScene(renderer, food, snake);
 

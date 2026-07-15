@@ -16,11 +16,11 @@
 #include "snake.h"
 #include "scene.h"
 
-int TimeStep = 180;
-bool WallExit = true;
 int curScore = 0;
 int maxScore = 0;
-
+int TimeStep = MIN_TIMESTEP - 40;
+bool WallExit = true;
+bool AutoRun = true;
 
 void Init()
 {

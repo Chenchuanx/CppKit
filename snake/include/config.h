@@ -7,15 +7,20 @@
 
 #define PER_RECT 20
 
-#define WINDOW_WIDTH 600
+#define WINDOW_WIDTH 400
 #define WINDOW_HEIGHT 480
 
-#define GAME_WIDTH 600
+#define GAME_WIDTH 400
 #define GAME_HEIGHT 400
 
+#define GAME_ROWS (GAME_HEIGHT / PER_RECT)
+#define GAME_COLS (GAME_WIDTH  / PER_RECT)
+
 #define TITLE_PNG_PATH "./res/images/title.png"
-#define TiTLE_PNG_W 528
-#define TiTLE_PNG_H 156
+#define TiTLE_PNG_W 380
+#define TiTLE_PNG_H 112
+// #define TiTLE_PNG_W 528
+// #define TiTLE_PNG_H 156
 
 #define FOOD_PNG_PATH "./res/images/food.png"
 #define FOOD_PNG_W 20
@@ -55,6 +60,7 @@ extern int curScore;
 extern int maxScore;
 
 extern bool WallExit;
+extern bool AutoRun;
 extern int TimeStep;
 
 const int STEP_OFFSET  = 20;

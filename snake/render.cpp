@@ -95,19 +95,34 @@ void RenderGameScene(SDL_Renderer *renderer, Food &food, Snake &snake)
     snake.Draw(renderer);
     
     // 分数
-    SDL_Rect rectText = {10, GAME_HEIGHT + 28, 0, 0};
-    std::stringstream ss;
-
-    ss << "当前分数: " << curScore << "      " << "历史记录: " << maxScore;
-    ScreenPrint(renderer, 24, ss.str(), rectText);
-
+    TTF_Font *scoreFont = font24;
+    SDL_Color scoreColor = {0xff, 0xff, 0xff, 0xff};
+    SDL_Rect textRect = {10, GAME_HEIGHT + 28, 0, 0};
+    
+    std::stringstream curText;
+    curText << "当前分数: " << curScore;
+    SDL_Surface *curSurface = TTF_RenderUTF8_Blended(scoreFont, curText.str().c_str(), scoreColor);    
+    SDL_Texture *curTexture = SDL_CreateTextureFromSurface(renderer, curSurface);
+    SDL_QueryTexture(curTexture, NULL, NULL, &textRect.w, &textRect.h);
+    SDL_RenderCopy(renderer, curTexture, NULL, &textRect);
+    
+    std::stringstream maxText;
+    maxText << "历史记录: " << maxScore;
+    textRect.x = GAME_WIDTH / 2;
+    ScreenPrint(renderer, 24, maxText.str(), textRect);
+    
     // 边界
     if (WallExit) SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
     else SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
     SDL_Rect rectGame = {0, 0, GAME_WIDTH, GAME_HEIGHT};
     SDL_RenderDrawRect(renderer, &rectGame);
-
+    
+    // 渲染
     SDL_RenderPresent(renderer);
+
+    // 清理
+    SDL_DestroyTexture(curTexture);
+    SDL_FreeSurface(curSurface);
 }
 
 void RenderGameOverScene(SDL_Renderer *renderer)
@@ -134,7 +149,10 @@ void RenderPauseScene(SDL_Renderer *renderer) {
     SDL_Rect rectAdd = {WINDOW_WIDTH / 2 + 150, 120, BUTTON_W, BUTTON_H};
 
     SDL_Rect rectWallText = {WINDOW_WIDTH / 2 - 200, 200, 0, 0};
-    SDL_Rect rectBut = {WINDOW_WIDTH / 2 + 125, 200, BUTTON_W, BUTTON_H};
+    SDL_Rect rectWall = {WINDOW_WIDTH / 2 + 125, 200, BUTTON_W, BUTTON_H};
+
+    SDL_Rect rectAutoText = {WINDOW_WIDTH / 2 - 200, 280, 0, 0};
+    SDL_Rect rectAuto = {WINDOW_WIDTH / 2 + 125, 280, BUTTON_W, BUTTON_H};
 
     // 背景底色
     SDL_SetRenderDrawColor(renderer, 0x1A, 0x4D, 0x2C, 0xff);
@@ -145,16 +163,24 @@ void RenderPauseScene(SDL_Renderer *renderer) {
 
     // 实时绘制描述文字
     char textBuf[64] = {0};
+
     sprintf(textBuf, "速度: %d", MAX_TIMESTEP - TimeStep + 20);
     ScreenPrint(renderer, 24, textBuf, rectSpeedText);
+
     if (WallExit) sprintf(textBuf, "墙: 开启");
     else sprintf(textBuf, "墙: 关闭");
     ScreenPrint(renderer, 24, textBuf, rectWallText);
 
+    if (AutoRun) sprintf(textBuf, "自动: 开启");
+    else sprintf(textBuf, "自动: 关闭");
+    ScreenPrint(renderer, 24, textBuf, rectAutoText);
+
     // 绘制按钮图片
     ScreenImg(renderer, SUB_PNG_PATH, rectSub);
     ScreenImg(renderer, ADD_PNG_PATH, rectAdd);
-    ScreenImg(renderer, BUT_PNG_PATH, rectBut);
+    ScreenImg(renderer, BUT_PNG_PATH, rectWall);
+    ScreenImg(renderer, BUT_PNG_PATH, rectAuto);
+
 
     // 画面刷新
     SDL_RenderPresent(renderer);
